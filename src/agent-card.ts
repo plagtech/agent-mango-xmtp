@@ -1,0 +1,90 @@
+export const AGENT_CARD = {
+  "$schema": "https://raw.githubusercontent.com/a]google/A2A/main/specification/json/a2a.schema.json",
+  "agentId": "agent-mango",
+  "name": "Agent Mango",
+  "description": "DeFi agent suite: MangoSwap (token swaps on Base via Uniswap V3/Aerodrome) and Spraay (multi-chain batch payments). Both registered as ERC-8004 agents on Ethereum mainnet.",
+  "url": "https://gateway.spraay.app",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false,
+  },
+  "skills": [
+    {
+      "id": "mangoswap-swap",
+      "name": "Token Swap",
+      "description": "Swap tokens on Base network via Uniswap V3 and Aerodrome routing. Gas-free via Coinbase Paymaster.",
+      "tags": ["defi", "swap", "base", "uniswap", "aerodrome"],
+      "examples": [
+        "Swap 100 USDC for ETH on Base",
+        "What's the best route for USDC to DEGEN?",
+      ],
+    },
+    {
+      "id": "mangoswap-dca",
+      "name": "DCA Schedule",
+      "description": "Set up dollar-cost averaging schedules for token purchases on Base.",
+      "tags": ["defi", "dca", "scheduled", "base"],
+      "examples": [
+        "DCA $50 into ETH every week",
+        "Schedule daily buys of DEGEN with USDC",
+      ],
+    },
+    {
+      "id": "spraay-batch-payment",
+      "name": "Batch Payment",
+      "description": "Send payments to multiple recipients in a single transaction across Base, Bittensor, Unichain, Plasma, and BOB networks.",
+      "tags": ["payments", "batch", "multi-chain", "base", "bittensor", "unichain", "plasma", "bob"],
+      "examples": [
+        "Send 10 USDC each to 5 addresses on Base",
+        "Batch payment of TAO to 3 wallets on Bittensor",
+      ],
+    },
+    {
+      "id": "spraay-x402",
+      "name": "x402 Paid API",
+      "description": "Access Spraay's x402 payment gateway endpoints. 9 paid endpoints for AI agent micropayments on Base mainnet.",
+      "tags": ["x402", "micropayments", "api", "base"],
+      "examples": [
+        "Query Spraay x402 gateway for batch payment pricing",
+      ],
+    },
+  ],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain", "application/json"],
+  "authentication": {
+    "schemes": ["erc-8004"],
+    "credentials": null,
+  },
+  "provider": {
+    "organization": "MangoSwap / Spraay",
+    "url": "https://mangoswap.xyz",
+    "contactEmail": null,
+  },
+  "erc8004": {
+    "ethereum": {
+      "mangoswap": {
+        "agentId": 26345,
+        "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+        "ipfs": "ipfs://QmdXKbLSZZWv5jNmm7nBnFjCuy2uqAqbdYds8Vr9uyvMcP",
+        "scan": "https://8004scan.io/ethereum/agent/26345",
+      },
+      "spraay": {
+        "agentId": 26346,
+        "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+        "ipfs": "ipfs://QmTXXda6RSGsct6if4SHRb78kLNUPGS1pUkQQ9NgzFsnSX",
+        "scan": "https://8004scan.io/ethereum/agent/26346",
+      },
+    },
+    "baseSepolia": {
+      "mangoswap": { "agentId": 2465 },
+      "spraay": { "agentId": 2466 },
+    },
+  },
+  "xmtp": {
+    "enabled": true,
+    "environment": "production",
+    "agentAddress": "0xd136d8D5e7aaD3a76e08950a76b418B013c6d546",
+  },
+};
