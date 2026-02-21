@@ -1,19 +1,9 @@
-import { ethers } from "ethers";
-
-// XMTP MLS client types — imported at runtime
-// Using dynamic import to handle the native bindings gracefully
-let Client: any;
-let GroupPermissionPolicies: any;
+// XMTP listener — mock mode until @xmtp/node-sdk is integrated
+// Health server + agent card are fully functional
 
 async function loadXmtp() {
-  try {
-    const xmtp = await import("@xmtp/mls-client");
-    Client = xmtp.Client;
-    return true;
-  } catch (err) {
-    console.warn("[XMTP] MLS client not available, running in mock mode");
-    return false;
-  }
+  console.warn("[XMTP] XMTP SDK not yet integrated, running in mock mode");
+  return false;
 }
 
 // --- Message handler ---
@@ -27,9 +17,7 @@ interface ParsedCommand {
 function parseMessage(text: string): ParsedCommand {
   const lower = text.toLowerCase().trim();
 
-  // MangoSwap commands
   if (lower.startsWith("/swap") || lower.includes("swap")) {
-    // e.g., "/swap 100 USDC to ETH" or "swap 50 USDC for DEGEN"
     const match = lower.match(/swap\s+([\d.]+)\s+(\w+)\s+(?:to|for)\s+(\w+)/);
     return {
       agent: "mangoswap",
@@ -44,58 +32,26 @@ function parseMessage(text: string): ParsedCommand {
   }
 
   if (lower.startsWith("/dca") || lower.includes("dca")) {
-    return {
-      agent: "mangoswap",
-      action: "dca",
-      params: {},
-      raw: text,
-    };
+    return { agent: "mangoswap", action: "dca", params: {}, raw: text };
   }
 
   if (lower.startsWith("/quote") || lower.includes("price") || lower.includes("quote")) {
-    return {
-      agent: "mangoswap",
-      action: "quote",
-      params: {},
-      raw: text,
-    };
+    return { agent: "mangoswap", action: "quote", params: {}, raw: text };
   }
 
-  // Spraay commands
   if (lower.startsWith("/batch") || lower.includes("batch") || lower.includes("send to multiple")) {
-    return {
-      agent: "spraay",
-      action: "batch-payment",
-      params: {},
-      raw: text,
-    };
+    return { agent: "spraay", action: "batch-payment", params: {}, raw: text };
   }
 
   if (lower.startsWith("/x402") || lower.includes("x402") || lower.includes("gateway")) {
-    return {
-      agent: "spraay",
-      action: "x402",
-      params: {},
-      raw: text,
-    };
+    return { agent: "spraay", action: "x402", params: {}, raw: text };
   }
 
-  // Help / info
   if (lower === "/help" || lower === "help" || lower === "hi" || lower === "hello") {
-    return {
-      agent: "unknown",
-      action: "help",
-      params: {},
-      raw: text,
-    };
+    return { agent: "unknown", action: "help", params: {}, raw: text };
   }
 
-  return {
-    agent: "unknown",
-    action: "unknown",
-    params: {},
-    raw: text,
-  };
+  return { agent: "unknown", action: "unknown", params: {}, raw: text };
 }
 
 function generateResponse(cmd: ParsedCommand): string {
@@ -169,84 +125,4 @@ function generateResponse(cmd: ParsedCommand): string {
         "Gateway: https://gateway.spraay.app",
         "Payment wallet: 0xAd62f03C7514bb8c51f1eA70C2b75C37404695c8",
         "",
-        "Bazaar discovery enabled. Coinbase CDP facilitator active.",
-      ].join("\n");
-
-    default:
-      return [
-        "🥭 I didn't understand that. Try /help to see what I can do!",
-        "",
-        "Quick commands: /swap, /dca, /batch, /x402, /help",
-      ].join("\n");
-  }
-}
-
-// --- XMTP listener ---
-export async function startXmtpListener() {
-  const privateKey = process.env.AGENT_PRIVATE_KEY;
-  if (!privateKey) {
-    console.error("[XMTP] AGENT_PRIVATE_KEY not set — running health server only");
-    return;
-  }
-
-  const xmtpAvailable = await loadXmtp();
-
-  if (!xmtpAvailable) {
-    console.log("[XMTP] Running in mock mode (MLS client unavailable)");
-    console.log("[XMTP] Health server and agent card are still active.");
-    console.log("[XMTP] To enable real XMTP: ensure Node v20+ and native bindings are installed.");
-    return;
-  }
-
-  const wallet = new ethers.Wallet(privateKey);
-  console.log(`[XMTP] Agent wallet: ${wallet.address}`);
-
-  try {
-    // Create XMTP client
-    const xmtpEnv = (process.env.XMTP_ENV || "production") as "production" | "dev";
-    console.log(`[XMTP] Connecting to ${xmtpEnv} network...`);
-
-    const client = await Client.create(wallet, {
-      env: xmtpEnv,
-    });
-
-    console.log(`[XMTP] Connected! Listening for messages...`);
-    console.log(`[XMTP] Agent address: ${client.accountAddress}`);
-
-    // Stream all conversations
-    const stream = await client.conversations.stream();
-
-    for await (const conversation of stream) {
-      console.log(`[XMTP] New conversation: ${conversation.id}`);
-
-      // Stream messages in each conversation
-      const msgStream = await conversation.streamMessages();
-
-      (async () => {
-        for await (const message of msgStream) {
-          // Skip our own messages
-          if (message.senderAddress === client.accountAddress) continue;
-
-          const text = typeof message.content === "string"
-            ? message.content
-            : JSON.stringify(message.content);
-
-          console.log(`[XMTP] Message from ${message.senderAddress}: ${text}`);
-
-          const cmd = parseMessage(text);
-          const response = generateResponse(cmd);
-
-          console.log(`[XMTP] → ${cmd.agent}/${cmd.action}`);
-
-          await conversation.send(response);
-        }
-      })().catch((err) => {
-        console.error(`[XMTP] Message stream error:`, err);
-      });
-    }
-  } catch (err) {
-    console.error("[XMTP] Connection error:", err);
-    console.log("[XMTP] Will retry in 30 seconds...");
-    setTimeout(() => startXmtpListener(), 30000);
-  }
-}
+        "Bazaar
