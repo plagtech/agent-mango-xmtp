@@ -1,5 +1,5 @@
 import { Agent, isText } from "@xmtp/agent-sdk";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, existsSync } from "node:fs";
 
 function handleCommand(text: string): string {
   const lower = text.toLowerCase().trim();
@@ -22,6 +22,32 @@ function handleCommand(text: string): string {
   return "🥭 Try /help, /swap, /dca, /batch, or /x402";
 }
 
+/**
+ * Get the database path — follows XMTP's official Railway deployment pattern.
+ * Uses Railway volume if available, otherwise falls back to /data or ./
+ */
+function getDbPath(env: string, suffix: string = "xmtp"): string {
+  // Check Railway volume mount (set via Railway Volumes tab)
+  const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+  if (volumePath) {
+    const dbDir = `${volumePath}/${env}-${suffix}`;
+    console.log(`[XMTP] Using Railway volume path: ${dbDir}`);
+    return dbDir;
+  }
+
+  // Fallback: use /data if it exists (manually created volume)
+  if (existsSync("/data")) {
+    const dbDir = `/data/${env}-${suffix}`;
+    console.log(`[XMTP] Using /data volume path: ${dbDir}`);
+    return dbDir;
+  }
+
+  // Last resort: current directory (works for local dev)
+  const dbDir = `./${env}-${suffix}`;
+  console.log(`[XMTP] Using local path: ${dbDir}`);
+  return dbDir;
+}
+
 export async function startXmtpListener(): Promise<void> {
   const walletKey = process.env.AGENT_PRIVATE_KEY;
   if (!walletKey) {
@@ -29,14 +55,26 @@ export async function startXmtpListener(): Promise<void> {
     return;
   }
 
-  try {
-    const dbPath = "/tmp/xmtp-data";
-    const xmtpEnv = (process.env.XMTP_ENV || "production") as "production" | "dev" | "local";
+  // Ensure DB encryption key exists
+  if (!process.env.XMTP_DB_ENCRYPTION_KEY) {
+    console.error("[XMTP] XMTP_DB_ENCRYPTION_KEY not set - running health server only");
+    console.error('[XMTP] Generate one: node -e "console.log(\'0x\' + require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    return;
+  }
 
+  try {
+    const xmtpEnv = (process.env.XMTP_ENV || "production") as "production" | "dev" | "local";
+    const dbPath = getDbPath(xmtpEnv);
+
+    // Ensure the db directory exists
     try { mkdirSync(dbPath, { recursive: true }); } catch {}
 
+    // Set env vars that Agent.createFromEnv() reads
     process.env.XMTP_WALLET_KEY = walletKey;
     process.env.XMTP_ENV = xmtpEnv;
+
+    console.log(`[XMTP] Initializing agent on ${xmtpEnv} network...`);
+    console.log(`[XMTP] DB path: ${dbPath}`);
 
     const agent = await Agent.createFromEnv({ dbPath });
 
@@ -52,7 +90,7 @@ export async function startXmtpListener(): Promise<void> {
     });
 
     agent.on("start", () => {
-      console.log("[XMTP] Agent is listening on " + xmtpEnv + " network");
+      console.log("[XMTP] ✅ Agent is listening on " + xmtpEnv + " network");
       console.log("[XMTP] Address: " + agent.address);
     });
 
