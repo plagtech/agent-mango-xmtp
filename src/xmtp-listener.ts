@@ -30,8 +30,7 @@ export async function startXmtpListener(): Promise<void> {
   }
 
   try {
-    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH || "/data";
-    const dbPath = volumePath + "/xmtp";
+    const dbPath = "/app/xmtp-data";
     const xmtpEnv = (process.env.XMTP_ENV || "production") as "production" | "dev" | "local";
 
     try { mkdirSync(dbPath, { recursive: true }); } catch {}
