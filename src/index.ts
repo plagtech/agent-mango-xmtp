@@ -1,9 +1,7 @@
-import dotenv from "dotenv";
-dotenv.config();
-
+import "dotenv/config";
 import express from "express";
-import { startXmtpListener } from "./xmtp-listener";
-import { AGENT_CARD } from "./agent-card";
+import { startXmtpListener } from "./xmtp-listener.js";
+import { AGENT_CARD } from "./agent-card.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
