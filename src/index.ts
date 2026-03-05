@@ -29,6 +29,7 @@ async function getXmtpClient(): Promise<Client | null> {
     });
 
     const signer = {
+      type: "EOA" as const,
       getIdentifier: async () => ({
         identifierKind: IdentifierKind.Ethereum,
         identifier: account.address.toLowerCase(),
