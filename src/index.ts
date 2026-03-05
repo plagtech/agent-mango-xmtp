@@ -1,9 +1,6 @@
 import "dotenv/config";
 import express from "express";
-import { Client } from "@xmtp/node-sdk";
-import { createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { mainnet } from "viem/chains";
+import { Client, IdentifierKind } from "@xmtp/node-sdk";
 import { startXmtpListener } from "./xmtp-listener.js";
 import { AGENT_CARD } from "./agent-card.js";
 
@@ -19,21 +16,31 @@ async function getXmtpClient(): Promise<Client | null> {
   const key = process.env.AGENT_PRIVATE_KEY;
   if (!key) return null;
   try {
+    // node-sdk v5 signer interface
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const { createWalletClient, http } = await import("viem");
+    const { mainnet } = await import("viem/chains");
+
     const account = privateKeyToAccount(key as `0x${string}`);
     const walletClient = createWalletClient({
       account,
       chain: mainnet,
       transport: http(),
     });
+
     const signer = {
-      getAddress: async () => account.address,
+      getIdentifier: async () => ({
+        identifierKind: IdentifierKind.Ethereum,
+        identifier: account.address.toLowerCase(),
+      }),
       signMessage: async (message: string) =>
         walletClient.signMessage({ message }),
     };
+
     xmtpClient = await Client.create(signer, {
       env: (process.env.XMTP_ENV as "production" | "dev") || "production",
     });
-    console.log("[XMTP Outbound] Client ready:", xmtpClient.accountAddress);
+    console.log("[XMTP Outbound] Client ready:", xmtpClient.accountIdentifier);
     return xmtpClient;
   } catch (err) {
     console.error("[XMTP Outbound] Failed to init client:", err);
@@ -79,6 +86,7 @@ app.get("/", (_req, res) => {
 // --- XMTP HTTP API (called by Spraay gateway) ---
 
 // POST /api/xmtp/send
+// Body: { to: "0xAddress", message: "Hello" }
 app.post("/api/xmtp/send", async (req, res) => {
   try {
     const { to, message } = req.body;
@@ -89,7 +97,10 @@ app.post("/api/xmtp/send", async (req, res) => {
     if (!client) {
       return res.status(503).json({ error: "XMTP client not ready" });
     }
-    const conversation = await client.conversations.newDm(to);
+    const conversation = await client.conversations.createDmWithIdentifier({
+      identifierKind: IdentifierKind.Ethereum,
+      identifier: to.toLowerCase(),
+    });
     await conversation.send(message);
     res.json({ success: true, to, message, timestamp: new Date().toISOString() });
   } catch (err: any) {
@@ -99,6 +110,7 @@ app.post("/api/xmtp/send", async (req, res) => {
 });
 
 // POST /api/xmtp/broadcast
+// Body: { recipients: ["0xAddr1", "0xAddr2"], message: "Hello" }
 app.post("/api/xmtp/broadcast", async (req, res) => {
   try {
     const { recipients, message } = req.body;
@@ -114,7 +126,10 @@ app.post("/api/xmtp/broadcast", async (req, res) => {
     }
     const results = await Promise.allSettled(
       recipients.map(async (to: string) => {
-        const conversation = await client.conversations.newDm(to);
+        const conversation = await client.conversations.createDmWithIdentifier({
+          identifierKind: IdentifierKind.Ethereum,
+          identifier: to.toLowerCase(),
+        });
         await conversation.send(message);
         return to;
       })
