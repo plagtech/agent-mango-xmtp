@@ -34,8 +34,15 @@ async function getXmtpClient(): Promise<Client | null> {
         identifierKind: IdentifierKind.Ethereum,
         identifier: account.address.toLowerCase(),
       }),
-      signMessage: async (message: string) =>
-        walletClient.signMessage({ message }),
+      signMessage: async (message: string) => {
+        const sig = await walletClient.signMessage({ message });
+        const hex = sig.slice(2);
+        const bytes = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < bytes.length; i++) {
+          bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+        }
+        return bytes;
+      },
     };
 
     xmtpClient = await Client.create(signer, {
